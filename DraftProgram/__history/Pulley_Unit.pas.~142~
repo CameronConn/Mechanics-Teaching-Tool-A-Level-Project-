@@ -1,0 +1,280 @@
+unit Pulley_Unit;
+
+interface
+
+uses
+  System.SysUtils, System.Types, System.UITypes, System.Classes,
+  System.Variants,
+  FMX.Types, FMX.Graphics, FMX.Controls, FMX.Forms, FMX.Dialogs, FMX.StdCtrls,
+  FMX.Objects, FMX.Edit, Math;
+
+type
+  TPulley_Form = class(TForm)
+    Close_Program_Button: TButton;
+    Angle_Input: TEdit;
+    Angle_Input_Label: TLabel;
+    Friction_Input_Label: TLabel;
+    Friction_Input: TEdit;
+    Ball1_Mass_Label: TLabel;
+    Ball1_Mass_Input: TEdit;
+    Ball2_Mass_Input: TEdit;
+    Ball2_Mass_Label: TLabel;
+    LengthPlank_Label: TLabel;
+    LengthString_Label: TLabel;
+    LengthPlank_Input: TEdit;
+    LengthString_Input: TEdit;
+    DistanceBall1UpPlank_Input: TEdit;
+    DistanceBall1UpPlank_Label: TLabel;
+    Update: TButton;
+    Execute: TButton;
+    Ball1_Line: TLine;
+    Ball2_Line: TLine;
+    Plank_Line: TLine;
+    procedure Close_Program_ButtonClick(Sender: TObject);
+    procedure FormCreate(Sender: TObject);
+    procedure UpdateClick(Sender: TObject);
+    procedure ExecuteClick(Sender: TObject);
+  private
+    { Private declarations }
+  public
+    { Public declarations }
+  end;
+
+  TParticle = Class(TImage)
+  Private
+  Public
+    Constructor Create(FilePath: String; var AOwner);
+    Procedure MoveBalls (DistanceBall1UpPlank,LengthPlank,PlankAngle,LengthString : real);
+    Procedure ExecuteWhatWillHappen(CoefficientofFriction,Ball1Mass,Ball2Mass,LengthPlank,DistanceBall1UpPlank,PlankAngle,LengthString:Real);
+    Destructor Destroy;
+  End;
+
+
+var
+  Pulley_Form: TPulley_Form;
+  Particles: Array [1 .. 2] of TParticle;
+
+CONST Ball_Size = 50;
+      Plank_Size = 520;
+      Scale_Factor_Ball1 = 490;
+      Scale_Factor_Ball2 = 510;
+      g = 9.81;
+      PartialNumber = 100;
+
+implementation
+
+{$R *.fmx}
+
+Constructor TParticle.Create(FilePath: String; var AOwner);
+begin
+  Inherited Create(TComponent(AOwner));
+  Bitmap.LoadFromFile(FilePath);
+  Parent := TFMXObject(AOwner);
+end;
+
+Destructor TParticle.Destroy;
+begin
+  Inherited Destroy;
+end;
+
+Procedure TParticle.MoveBalls(DistanceBall1UpPlank,LengthPlank,PlankAngle,LengthString: real);  //Plank angle may not be necessary
+ Var NewYBall1, NewYBall2,NewXBall1,NewXBall2,MoveConstant : real;
+begin
+ if PlankAngle<=45 then
+  begin
+    MoveConstant:=16.5*Sin(DegToRad(45-PlankAngle));
+    NewYBall1:= 575 + (MoveConstant/((Sqrt((Power((tan(degtorad(PlankAngle))),2))+1)))) - (((DistanceBall1UpPlank)*Sin(degtorad(PlankAngle)))*Scale_Factor_Ball1*(1/LengthPlank));  //45 instead of plank angle as no animate yet
+    NewXBall1:= 235 + (MoveConstant/((Sqrt((1/(Power((tan(degtorad(PlankAngle))),2)))+1)))) + (((DistanceBall1UpPlank)*Cos(degtorad(PlankAngle)))*Scale_Factor_Ball1*(1/LengthPlank));
+  end
+ else
+  begin
+    MoveConstant:=16.5*Sin(DegToRad(PlankAngle-45));
+    NewYBall1:= 575 - (MoveConstant/((Sqrt((Power((tan(degtorad(PlankAngle))),2))+1)))) - (((DistanceBall1UpPlank)*Sin(degtorad(PlankAngle)))*Scale_Factor_Ball1*(1/LengthPlank));  //45 instead of plank angle as no animate yet
+    NewXBall1:= 235 - (MoveConstant/((Sqrt((1/(Power((tan(degtorad(PlankAngle))),2)))+1)))) + (((DistanceBall1UpPlank)*Cos(degtorad(PlankAngle)))*Scale_Factor_Ball1*(1/LengthPlank));
+  end;
+ NewYBall2:= 594 -(((LengthPlank*Sin(DegtoRad(PlankAngle)))-LengthString+LengthPlank-DistanceBall1UpPlank )*Scale_Factor_Ball2*Sin(DegToRad(PlankAngle))*(1/(LengthPlank*(Sin(DegtoRad(PlankAngle))))));
+ NewXBall2:= 246 +((Scale_Factor_Ball2*Cos(DegtoRad(PlankAngle))));
+ Particles[1].AnimateFloat('position.Y', NewYBall1,1);
+ Particles[1].AnimateFloat('position.X', NewXBall1,1);
+ Particles[2].AnimateFloat('position.Y', NewYBall2,1);
+ Particles[2].AnimateFloat('position.X', NewXBall2,1);
+end;
+
+Procedure TParticle.ExecuteWhatWillHappen(CoefficientofFriction,Ball1Mass,Ball2Mass,LengthPlank,DistanceBall1UpPlank,PlankAngle,LengthString:Real);
+Var Ball1InitialYLocation,Ball1InitialXLocation,Ball2InitialYLocation,PartsOfMovement,WaitingTime,TimeForThisMovement,PartEndVelocity,PartOfExtraDisplacement,CurrentInitialSpeed, Acceleration,LowestRatioForMovement,HighestRatioForMovement,NewYBall1,NewXBall1,NewYBall2,VelocityOfBall1WhenBall2HitGround,ExtraDisplacement,VelocityOfBall2WhenBall1HitGround : real;
+    UpSlope : string;
+    Counter : integer;
+begin
+CurrentInitialSpeed:=0;
+WaitingTime:=0;
+if Ball2Mass>Ball1Mass*((CoefficientofFriction*Cos(Degtorad(PlankAngle)))+Sin(Degtorad(PlankAngle))) then UpSlope:='UpSlope'
+else if Ball2Mass<Ball1Mass*((-CoefficientofFriction*Cos(Degtorad(PlankAngle)))+Sin(Degtorad(PlankAngle))) then UpSlope:='DownSlope'
+else UpSlope:= 'Stationery';
+if UpSlope = 'UpSlope' then
+ begin
+    Acceleration:=((-Ball1Mass*g*((Sin(Degtorad(PlankAngle)))+(CoefficientofFriction*(Cos(Degtorad(PlankAngle))))))+(Ball2Mass*g))/(Ball1Mass+Ball2Mass);
+    VelocityOfBall1WhenBall2HitGround:= Sqrt(2*Acceleration*((LengthPlank*Sin(Degtorad(PlankAngle)))-LengthString+LengthPlank-DistanceBall1UpPlank));
+    ExtraDisplacement:=(((VelocityOfBall1WhenBall2HitGround)*(VelocityOfBall1WhenBall2HitGround))/(2*g*((CoefficientofFriction*Cos(Degtorad(PlankAngle)))+(Sin(Degtorad(PlankAngle))))));
+    PartofExtraDisplacement:=ExtraDisplacement/PartialNumber;
+    PartsOfMovement:=((LengthPlank*Sin(DegtoRad(PlankAngle)))-LengthString+LengthPlank-DistanceBall1UpPlank)/PartialNumber;
+    Ball2InitialYLocation:=Particles[2].Position.Y;
+    Ball1InitialYlocation:=Particles[1].Position.Y;
+    Ball1InitialXLocation:=Particles[1].Position.X;
+    for counter := 1 to PartialNumber do
+      begin
+        PartEndVelocity:=Sqrt((CurrentInitialSpeed*CurrentInitialSpeed)+(2*Acceleration*PartsOfMovement));
+        TimeForThisMovement:=(PartEndVelocity-CurrentInitialSpeed)/Acceleration;
+        NewYBall2:=Ball2InitialYLocation+((Counter*PartsOfMovement)*Scale_Factor_Ball2*Sin(DegToRad(PlankAngle))*(1/(LengthPlank*(Sin(DegtoRad(PlankAngle))))));
+        NewXBall1:= Ball1InitialXLocation + (((Counter*PartsOfMovement)*Cos(degtorad(PlankAngle)))*Scale_Factor_Ball1*(1/LengthPlank));
+        NewYBall1:= Ball1InitialYlocation - (((Counter*PartsOfMovement)*Sin(degtorad(PlankAngle)))*Scale_Factor_Ball1*(1/LengthPlank));
+        Particles[1].AnimateFloatDelay('position.Y',NewYBall1,TimeForThisMovement,WaitingTime);
+        Particles[1].AnimateFloatDelay('position.X',NewXBall1,TimeForThisMovement,WaitingTime);
+        Particles[2].AnimateFloatDelay('position.Y',NewYBall2,TimeForThisMovement,WaitingTime);
+        WaitingTime:=WaitingTime+TimeforThisMovement;
+        CurrentInitialSpeed:=PartEndVelocity;
+      end;
+    Ball1InitialXLocation:=NewXBall1;
+    Ball1InitialYLocation:=NewYBall1;
+    for counter := 1 to (PartialNumber-1) do
+      begin
+       PartEndVelocity:=Sqrt((CurrentInitialSpeed*CurrentInitialSpeed)+(-2*g*((CoefficientofFriction*Cos(DegtoRad(PlankAngle)))+Sin(DegtoRad(PlankAngle)))*PartofExtraDisplacement));
+       TimeForThisMovement:=(2*PartofExtraDisplacement)/(CurrentInitialSpeed+PartEndVelocity);
+       NewXBall1:=Ball1InitialXLocation + ((((Counter*PartofExtraDisplacement))*Cos(degtorad(PlankAngle)))*Scale_Factor_Ball1*(1/LengthPlank));
+       NewYBall1:= Ball1InitialYLocation - ((((Counter*PartofExtraDisplacement))*Sin(degtorad(PlankAngle)))*Scale_Factor_Ball1*(1/LengthPlank));
+       Particles[1].AnimateFloatDelay('position.Y',NewYBall1,TimeForThisMovement,WaitingTime);
+       Particles[1].AnimateFloatDelay('position.X',NewXBall1,TimeForThisMovement,WaitingTime);
+       WaitingTime:=WaitingTime+TimeForThisMovement;
+       CurrentInitialSpeed:=PartEndVelocity;
+      end;
+    Ball1InitialXLocation:=NewXBall1;
+    Ball1InitialYLocation:=NewYBall1;
+    CurrentInitialSpeed:=0;
+    for counter := 1 to (PartialNumber-1) do
+      begin
+       PartEndVelocity:=Sqrt((CurrentInitialSpeed*CurrentInitialSpeed)+(2*g*((CoefficientofFriction*Cos(DegtoRad(PlankAngle)))+Sin(DegtoRad(PlankAngle)))*PartofExtraDisplacement));
+       TimeForThisMovement:=(2*PartofExtraDisplacement)/(CurrentInitialSpeed+PartEndVelocity);
+       NewXBall1:=Ball1InitialXLocation - (((((Counter*PartofExtraDisplacement)))*Cos(degtorad(PlankAngle)))*Scale_Factor_Ball1*(1/LengthPlank));
+       NewYBall1:=Ball1InitialYlocation + (((((Counter*PartofExtraDisplacement)))*Sin(degtorad(PlankAngle)))*Scale_Factor_Ball1*(1/LengthPlank));
+       Particles[1].AnimateFloatDelay('position.Y',NewYBall1,TimeForThisMovement,WaitingTime);
+       Particles[1].AnimateFloatDelay('position.X',NewXBall1,TimeForThisMovement,WaitingTime);
+       WaitingTime:=WaitingTime+TimeForThisMovement;
+       CurrentInitialSpeed:=PartEndVelocity;
+      end;
+ end
+ else if UpSlope = 'DownSlope' then begin
+    Acceleration:=((Ball1Mass*g*((Sin(Degtorad(PlankAngle)))-(CoefficientofFriction*(Cos(Degtorad(PlankAngle))))))-(Ball2Mass*g))/(Ball1Mass+Ball2Mass);
+    VelocityOfBall2WhenBall1HitGround:= Sqrt(2*Acceleration*DistanceBall1UpPlank);
+    ExtraDisplacement:=((VelocityOfBall2WhenBall1HitGround)*(VelocityOfBall2WhenBall1HitGround))/(2*g);
+    PartsOfMovement:=DistanceBall1UpPlank/PartialNumber;
+    PartofExtraDisplacement:=ExtraDisplacement/PartialNumber;
+    Ball2InitialYLocation:=Particles[2].Position.Y;
+    Ball1InitialYlocation:=Particles[1].Position.Y;
+    Ball1InitialXLocation:=Particles[1].Position.X;
+    for counter := 1 to PartialNumber do
+      begin
+        PartEndVelocity:=Sqrt((CurrentInitialSpeed*CurrentInitialSpeed)+(2*Acceleration*PartsOfMovement));
+        TimeForThisMovement:=(PartEndVelocity-CurrentInitialSpeed)/Acceleration;
+        NewYBall2:=Ball2InitialYLocation-((Counter*PartsOfMovement)*Scale_Factor_Ball2*Sin(DegToRad(PlankAngle))*(1/(LengthPlank*(Sin(DegtoRad(PlankAngle))))));
+        NewXBall1:= Ball1InitialXLocation - (((Counter*PartsOfMovement)*Cos(degtorad(PlankAngle)))*Scale_Factor_Ball1*(1/LengthPlank));
+        NewYBall1:= Ball1InitialYlocation + (((Counter*PartsOfMovement)*Sin(degtorad(PlankAngle)))*Scale_Factor_Ball1*(1/LengthPlank));
+        Particles[1].AnimateFloatDelay('position.Y',NewYBall1,TimeForThisMovement,WaitingTime);
+        Particles[1].AnimateFloatDelay('position.X',NewXBall1,TimeForThisMovement,WaitingTime);
+        Particles[2].AnimateFloatDelay('position.Y',NewYBall2,TimeForThisMovement,WaitingTime);
+        WaitingTime:=WaitingTime+TimeforThisMovement;
+        CurrentInitialSpeed:=PartEndVelocity;
+      end;
+    Ball2InitialYLocation:=NewYBall2;
+    for counter := 1 to (PartialNumber-1) do
+      begin
+       PartEndVelocity:=Sqrt((CurrentInitialSpeed*CurrentInitialSpeed)+(-2*g*PartofExtraDisplacement));
+       TimeForThisMovement:=(2*PartofExtraDisplacement)/(CurrentInitialSpeed+PartEndVelocity);
+       NewYBall2:=Ball2InitialYLocation-((Counter*PartOfExtraDisplacement)*Scale_Factor_Ball2*Sin(DegToRad(PlankAngle))*(1/(LengthPlank*(Sin(DegtoRad(PlankAngle))))));
+       Particles[2].AnimateFloatDelay('position.y',NewYBall2,TimeForThisMovement,WaitingTime);
+       WaitingTime:=WaitingTime+TimeForThisMovement;
+       CurrentInitialSpeed:=PartEndVelocity;
+      end;
+    CurrentInitialSpeed:=0;
+    Ball2InitialYLocation:=NewYBall2;
+    for counter := 1 to (PartialNumber-1) do
+      begin
+       PartEndVelocity:=Sqrt((CurrentInitialSpeed*CurrentInitialSpeed)+(2*g*PartofExtraDisplacement));
+       TimeForThisMovement:=(2*PartofExtraDisplacement)/(CurrentInitialSpeed+PartEndVelocity);
+       NewYBall2:=Ball2InitialYLocation+((Counter*PartOfExtraDisplacement)*Scale_Factor_Ball2*Sin(DegToRad(PlankAngle))*(1/(LengthPlank*(Sin(DegtoRad(PlankAngle))))));
+       Particles[2].AnimateFloatDelay('position.y',NewYBall2,TimeForThisMovement,WaitingTime);
+       WaitingTime:=WaitingTime+TimeForThisMovement;
+       CurrentInitialSpeed:=PartEndVelocity;
+      end;
+ end
+ else if UpSlope = 'Stationery' then Showmessage('The Ball would not move!');
+ LowestRatioForMovement:= (CoefficientofFriction*Cos(Degtorad(PlankAngle)))+Sin(Degtorad(PlankAngle));
+ HighestRatioForMovement:=(-CoefficientofFriction*Cos(Degtorad(PlankAngle)))+Sin(Degtorad(PlankAngle));
+ //Showmessage('For this angle and coefficient of friction, the system will only move where the Mass of Ball 2 divided by the Mass of Ball 1 is greater than ' + floattostr(LowestRatioForMovement) + ' or smaller than ' + floattostr(HighestRatioForMovement));
+end;
+      {Make animating time react to velocity changes so realistic}
+
+
+
+
+procedure TPulley_Form.Close_Program_ButtonClick(Sender: TObject);
+begin
+  halt;
+end;
+
+
+
+procedure TPulley_Form.FormCreate(Sender: TObject);
+begin
+  Pulley_Form.FullScreen := true;
+  Plank_Line.RotationCenter.X:=0;
+  Plank_Line.RotationCenter.Y:=0;
+  Plank_Line.Stroke.Thickness:=8;
+  Plank_Line.Position.X:=260;
+  Plank_Line.Position.Y:=630;
+  Plank_Line.Height:=Plank_Size;
+  Plank_Line.Width:=Plank_Size;
+  Plank_Line.RotationAngle:=-45;
+  Particles[1] := TParticle.Create('Particle_Picture.png', Self);
+  Particles[1].Position.X := 575;
+  Particles[1].Position.Y := 235;
+  Particles[1].SetHeight(Ball_Size);
+  Particles[1].SetWidth(Ball_Size);
+  Particles[2] := TParticle.Create('Particle_Picture.png', Self);
+  Particles[2].Position.X := 610;
+  Particles[2].Position.Y := 594;
+  Particles[2].SetHeight(Ball_Size);
+  Particles[2].SetWidth(Ball_Size);
+  Ball2_Line.Stroke.Thickness:=3;
+  Ball2_Line.Position.X:=260;
+  Ball2_Line.Position.Y:=630;
+end;
+
+
+
+procedure TPulley_Form.UpdateClick(Sender: TObject);
+Var  Plank_Angle,C_Of_Friction,Ball1_Mass,Ball2_Mass,Length_Plank,Length_String,Distance_Up_Plank : real;
+begin
+  Plank_Angle := strtofloat(Angle_Input.Text);
+  C_Of_Friction := strtofloat(Friction_Input.Text);
+  Ball1_Mass := strtofloat(Ball1_Mass_Input.Text);
+  Ball2_Mass := strtofloat(Ball2_Mass_Input.Text);
+  Length_Plank := strtofloat(LengthPlank_Input.Text);
+  Length_String := strtofloat(LengthString_Input.Text);
+  Distance_Up_Plank := strtofloat(DistanceBall1UpPlank_Input.Text);
+  Plank_Line.AnimateFloat('rotationangle',-Plank_Angle,1);
+  Particles[1].Moveballs(Distance_Up_Plank,Length_Plank,Plank_Angle,Length_String);    //Plank angle may not be necessary
+end;
+
+procedure TPulley_Form.ExecuteClick(Sender: TObject);
+Var  Plank_Angle,C_Of_Friction,Ball1_Mass,Ball2_Mass,Length_Plank,Length_String,Distance_Up_Plank : real;
+begin
+  Plank_Angle := strtofloat(Angle_Input.Text);
+  C_Of_Friction := strtofloat(Friction_Input.Text);
+  Ball1_Mass := strtofloat(Ball1_Mass_Input.Text);
+  Ball2_Mass := strtofloat(Ball2_Mass_Input.Text);
+  Length_Plank := strtofloat(LengthPlank_Input.Text);
+  Length_String := strtofloat(LengthString_Input.Text);
+  Distance_Up_Plank := strtofloat(DistanceBall1UpPlank_Input.Text);
+  Particles[1].ExecuteWhatWillHappen(C_Of_Friction,Ball1_Mass,Ball2_Mass,Length_Plank,Distance_Up_Plank,Plank_Angle,Length_String);
+end;
+
+end.

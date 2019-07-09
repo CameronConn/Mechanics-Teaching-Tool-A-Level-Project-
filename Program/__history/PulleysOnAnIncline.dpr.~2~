@@ -1,0 +1,13 @@
+program PulleysOnAnIncline;
+
+uses
+  FMX.Forms,
+  MainMenuUnit in 'MainMenuUnit.pas' {MainMenuForm};
+
+{$R *.res}
+
+begin
+  Application.Initialize;
+  Application.CreateForm(TMainMenuForm, MainMenuForm);
+  Application.Run;
+end.

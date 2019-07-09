@@ -1,0 +1,48 @@
+unit MainMenuUnit;
+
+interface
+
+uses
+  System.SysUtils, System.Types, System.UITypes, System.Classes, System.Variants, 
+  FMX.Types, FMX.Graphics, FMX.Controls, FMX.Forms, FMX.Dialogs, FMX.StdCtrls, OwnModelUnit, PracticeUnit;
+
+type
+  TMainMenuForm = class(TForm)
+    GoToOwnModel: TButton;
+    GoToPractice: TButton;
+    WelcomeMessage: TLabel;
+    CloseButton: TSpeedButton;
+    procedure CloseButtonClick(Sender: TObject);
+    procedure GoToOwnModelClick(Sender: TObject);
+    procedure GoToPracticeClick(Sender: TObject);
+  private
+    { Private declarations }
+  public
+    { Public declarations }
+  end;
+
+var
+  MainMenuForm: TMainMenuForm;
+
+implementation
+
+{$R *.fmx}
+
+procedure TMainMenuForm.CloseButtonClick(Sender: TObject);
+begin
+halt;
+end;
+
+procedure TMainMenuForm.GoToOwnModelClick(Sender: TObject);
+begin
+MainMenuForm.Hide;
+OwnModelForm.Show;
+end;
+
+procedure TMainMenuForm.GoToPracticeClick(Sender: TObject);
+begin
+MainMenuForm.Hide;
+PracticeForm.Show;
+end;
+
+end.

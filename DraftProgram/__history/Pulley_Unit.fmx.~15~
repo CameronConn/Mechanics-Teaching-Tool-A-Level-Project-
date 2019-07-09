@@ -1,0 +1,148 @@
+object Pulley_Form: TPulley_Form
+  Left = 0
+  Top = 0
+  Caption = 'Pulley'
+  ClientHeight = 707
+  ClientWidth = 1141
+  FormFactor.Width = 320
+  FormFactor.Height = 480
+  FormFactor.Devices = [dkDesktop, dkiPhone, dkiPad]
+  FullScreen = True
+  OnCreate = FormCreate
+  DesignerMobile = False
+  DesignerWidth = 0
+  DesignerHeight = 0
+  DesignerDeviceName = ''
+  DesignerOrientation = 0
+  DesignerOSVersion = ''
+  object Close_Program_Button: TButton
+    Height = 25.000000000000000000
+    Position.X = 496.000000000000000000
+    Position.Y = 32.000000000000000000
+    TabOrder = 0
+    Text = 'Close Program'
+    Width = 128.000000000000000000
+    OnClick = Close_Program_ButtonClick
+  end
+  object Angle_Input: TEdit
+    Touch.InteractiveGestures = [igLongTap, igDoubleTap]
+    TabOrder = 1
+    Position.X = 1016.000000000000000000
+    Position.Y = 144.000000000000000000
+    Width = 100.000000000000000000
+    Height = 22.000000000000000000
+    KillFocusByReturn = False
+  end
+  object Angle_Input_Label: TLabel
+    Height = 17.000000000000000000
+    Position.X = 872.000000000000000000
+    Position.Y = 144.000000000000000000
+    Text = 'Input the Angle'
+    Width = 120.000000000000000000
+  end
+  object Friction_Input_Label: TLabel
+    Height = 41.000000000000000000
+    Position.X = 872.000000000000000000
+    Position.Y = 184.000000000000000000
+    Text = 'Input the coefficient of friction'
+    Width = 137.000000000000000000
+  end
+  object Friction_Input: TEdit
+    Touch.InteractiveGestures = [igLongTap, igDoubleTap]
+    TabOrder = 4
+    Position.X = 1016.000000000000000000
+    Position.Y = 192.000000000000000000
+    Width = 100.000000000000000000
+    Height = 22.000000000000000000
+    KillFocusByReturn = False
+  end
+  object Ball1_Mass_Label: TLabel
+    Height = 33.000000000000000000
+    Position.X = 872.000000000000000000
+    Position.Y = 240.000000000000000000
+    Text = 'Enter the Mass of Ball 1'
+    Width = 137.000000000000000000
+  end
+  object Ball1_Mass_Input: TEdit
+    Touch.InteractiveGestures = [igLongTap, igDoubleTap]
+    TabOrder = 6
+    Position.X = 1016.000000000000000000
+    Position.Y = 240.000000000000000000
+    Width = 100.000000000000000000
+    Height = 22.000000000000000000
+    KillFocusByReturn = False
+  end
+  object Ball2_Mass_Input: TEdit
+    Touch.InteractiveGestures = [igLongTap, igDoubleTap]
+    TabOrder = 7
+    Position.X = 1016.000000000000000000
+    Position.Y = 296.000000000000000000
+    Width = 100.000000000000000000
+    Height = 22.000000000000000000
+    KillFocusByReturn = False
+  end
+  object Ball2_Mass_Label: TLabel
+    Height = 17.000000000000000000
+    Position.X = 872.000000000000000000
+    Position.Y = 296.000000000000000000
+    Text = 'Enter the Mass of Ball 2'
+    Width = 120.000000000000000000
+  end
+  object LengthPlank_Label: TLabel
+    Height = 33.000000000000000000
+    Position.X = 872.000000000000000000
+    Position.Y = 336.000000000000000000
+    Text = 'Enter the Length of the Plank'
+    Width = 136.000000000000000000
+  end
+  object LengthString_Label: TLabel
+    Height = 33.000000000000000000
+    Position.X = 872.000000000000000000
+    Position.Y = 376.000000000000000000
+    Text = 'Enter the Length of the String'
+    Width = 129.000000000000000000
+  end
+  object LengthPlank_Input: TEdit
+    Touch.InteractiveGestures = [igLongTap, igDoubleTap]
+    TabOrder = 11
+    Position.X = 1016.000000000000000000
+    Position.Y = 344.000000000000000000
+    Width = 100.000000000000000000
+    Height = 22.000000000000000000
+    KillFocusByReturn = False
+  end
+  object LengthString_Input: TEdit
+    Touch.InteractiveGestures = [igLongTap, igDoubleTap]
+    TabOrder = 12
+    Position.X = 1016.000000000000000000
+    Position.Y = 384.000000000000000000
+    Width = 100.000000000000000000
+    Height = 22.000000000000000000
+    KillFocusByReturn = False
+  end
+  object DistanceBall1UpPlank_Input: TEdit
+    Touch.InteractiveGestures = [igLongTap, igDoubleTap]
+    TabOrder = 13
+    Position.X = 1016.000000000000000000
+    Position.Y = 424.000000000000000000
+    Width = 100.000000000000000000
+    Height = 22.000000000000000000
+    KillFocusByReturn = False
+  end
+  object DistanceBall1UpPlank_Label: TLabel
+    Height = 33.000000000000000000
+    Position.X = 872.000000000000000000
+    Position.Y = 416.000000000000000000
+    Text = 'Enter the Distance Ball 1 starts up the Plank'
+    Width = 129.000000000000000000
+  end
+  object Update: TButton
+    Height = 22.000000000000000000
+    Position.X = 960.000000000000000000
+    Position.Y = 504.000000000000000000
+    TabOrder = 15
+    Text = 'Update'
+    Width = 80.000000000000000000
+    OnClick = UpdateClick
+  end
+end

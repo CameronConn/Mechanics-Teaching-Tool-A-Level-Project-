@@ -1,0 +1,62 @@
+object MainMenuForm: TMainMenuForm
+  Left = 0
+  Top = 0
+  Caption = 'Main Menu'
+  ClientHeight = 748
+  ClientWidth = 1021
+  StyleBook = MyStyleBook
+  FormFactor.Width = 320
+  FormFactor.Height = 480
+  FormFactor.Devices = [dkDesktop, dkiPhone, dkiPad]
+  FullScreen = True
+  DesignerMobile = False
+  DesignerWidth = 0
+  DesignerHeight = 0
+  DesignerDeviceName = ''
+  DesignerOrientation = 0
+  DesignerOSVersion = ''
+  object GoToOwnModel: TButton
+    Anchors = [akTop]
+    Height = 73.000000000000000000
+    Position.X = 272.000000000000000000
+    Position.Y = 328.000000000000000000
+    TabOrder = 0
+    Text = 'Create your own model!'
+    Width = 161.000000000000000000
+    OnClick = GoToOwnModelClick
+  end
+  object GoToPractice: TButton
+    Anchors = [akTop]
+    Height = 73.000000000000000000
+    Position.X = 536.000000000000000000
+    Position.Y = 328.000000000000000000
+    TabOrder = 1
+    Text = 'Practice!'
+    Width = 161.000000000000000000
+    OnClick = GoToPracticeClick
+  end
+  object WelcomeMessage: TLabel
+    Anchors = [akTop]
+    Font.Size = 36.000000000000000000
+    StyledSettings = [ssFamily, ssStyle, ssFontColor]
+    Height = 169.000000000000000000
+    Position.X = 264.000000000000000000
+    Position.Y = 48.000000000000000000
+    Text = 'Pulley Systems on an Incline'
+    Width = 521.000000000000000000
+  end
+  object CloseButton: TSpeedButton
+    Anchors = [akTop]
+    Height = 22.000000000000000000
+    Position.X = 904.000000000000000000
+    Position.Y = 24.000000000000000000
+    Text = 'CloseButton'
+    Width = 80.000000000000000000
+    OnClick = CloseButtonClick
+  end
+  object MyStyleBook: TStyleBook
+    Left = 968
+    Top = 696
+    ResourcesBin = {464D585F5354594C4520322E350100}
+  end
+end

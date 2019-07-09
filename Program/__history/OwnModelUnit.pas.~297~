@@ -1,0 +1,567 @@
+unit OwnModelUnit;
+
+interface
+
+uses
+  System.SysUtils, System.Types, System.UITypes, System.Classes, System.Variants, 
+  FMX.Types, FMX.Graphics, FMX.Controls, FMX.Forms, FMX.Dialogs, FMX.StdCtrls,
+  FMX.Objects, Math, FMX.Edit,BallUnit;
+
+type
+  TOwnModelForm = class(TForm)
+    Plank: TLine;
+    OwnModelFormWelcomeMessage: TLabel;
+    RequestForPlankAngle: TLabel;
+    RequestMassofBall1: TLabel;
+    RequestMassofBall2: TLabel;
+    RequestForLengthofPlank: TLabel;
+    RequestforDistanceBall1StartsupPlank: TLabel;
+    RequestforLengthofString: TLabel;
+    RequestforCoefficientOfFriction: TLabel;
+    AngleSelector: TSpinBox;
+    AngleDegrees: TLabel;
+    MassOfBall1Selector: TEdit;
+    Ball1Kilograms: TLabel;
+    MassOfBall2Selector: TEdit;
+    PlankLengthSelector: TEdit;
+    StringLengthSelector: TEdit;
+    HowFarBall1UpPlankSelector: TEdit;
+    CoefficientOfFrictionSelector: TEdit;
+    Ball2Kilograms: TLabel;
+    PlankLengthMetres: TLabel;
+    StringLengthMetres: TLabel;
+    HowFarBall1UpPlankMetres: TLabel;
+    PlankString: TLine;
+    VerticalString: TLine;
+    AnimateModelButton: TButton;
+    UpdateModelButton: TButton;
+    ResetButton: TButton;
+    CloseProgramButton: TButton;
+    ReturnToMenuButton: TButton;
+    procedure AngleSelectorChange(Sender: TObject);
+    procedure MassOfBall1SelectorChange(Sender: TObject);
+    procedure MassOfBall2SelectorChange(Sender: TObject);
+    procedure PlankLengthSelectorChange(Sender: TObject);
+    procedure StringLengthSelectorChange(Sender: TObject);
+    procedure HowFarBall1UpPlankSelectorChange(Sender: TObject);
+    procedure CoefficientOfFrictionSelectorChange(Sender: TObject);
+    procedure AnimatePlankAngle;
+    procedure AnimatePlankStringAngleAndPosition(TopOfSlopeY,TopOfSlopeX : real);
+    procedure AnimateVerticalStringPosition(TopOfSlopeY,TopOfSlopeX : real);
+    procedure AnimateBallsToCorrectPositions;
+    Procedure AnimateStringToCorrectHeight;
+    procedure UpdateModel;
+    procedure AnimateModelButtonClick(Sender: TObject);
+    procedure FormCreate(Sender: TObject);
+    procedure ResetToDefaultValues;
+    procedure UpdateModelButtonClick(Sender: TObject);
+    procedure CheckChosenValues;
+    procedure ResetButtonClick(Sender: TObject);
+    procedure FormKeyUp(Sender: TObject; var Key: Word; var KeyChar: Char;
+      Shift: TShiftState);
+    procedure CloseProgramButtonClick(Sender: TObject);
+    procedure ReturnToMenuButtonClick(Sender: TObject);
+    procedure FormShow(Sender: TObject);
+  private
+    { Private declarations }
+  public
+    { Public declarations }
+  end;
+
+var
+  OwnModelForm: TOwnModelForm;
+  PlankAngleDegrees, PlankAngleRadians, Ball1Mass, Ball2Mass, PlankLength, StringLength, DistanceBall1StartsUpPlank, CoefficientOfFriction, DefaultPlankAngleDegrees, DefaultBall1Mass, DefaultBall2Mass, DefaultPlankLength, DefaultStringLength, DefaultDistanceBall1StartsUpPlank, DefaultCoefficientOfFriction,HeightOfPlankPixels : real;
+  Ball1,Ball2: TBall;
+CONST
+  g = 9.8;
+  SmoothnessConstant=100;
+
+implementation
+
+uses MainMenuUnit;
+
+{$R *.fmx}
+
+
+
+function ConvertMetresToPixels(Input : real) : real;
+begin
+  result:=Input*(HeightOfPlankPixels/PlankLength);
+end;
+
+function CalculateHeightofPlankToUseInPixels : real;
+begin
+  if OwnModelForm.Height < OwnModelForm.Width then result:= OwnModelForm.Height-150
+  else result:=OwnModelForm.Width-150;
+end;
+
+function CalculateSignificantFigures(Input:String) : integer;
+var Stepper : integer;
+begin
+Result:=Length(Input);
+  for Stepper := 1 to Length(Input) do
+    begin
+      if Input[Stepper] = '.' then Result:=Length(Input) - 1
+    end;
+end;
+
+function RoundInputasString(Input:String;EndLength:Integer) : string;
+var Stepper : integer;
+    Finished : boolean;
+begin
+  if ord(Input[Endlength+1])>52
+    then begin
+           if ord(Input[Endlength])<57
+            then Input[EndLength]:=Char((Ord(Input[Endlength]))+1)
+            else begin
+                  Input[Endlength]:='0';
+                  Stepper:=EndLength-1;
+                  while not Finished do
+                      begin
+                        if ord(input[Stepper])<57
+                          then begin
+                                Input[Stepper]:=Char((Ord(Input[Stepper]))+1);
+                                Finished:=True;
+                               end
+                        else begin
+                              Input[Stepper]:='0';
+                              Stepper:=Stepper-1;
+                             end;
+                      end;
+                 end;
+         end;
+result:=Input;
+end;
+
+function MakeXDigits(Input:real;X:Integer) : real;
+Var InputasString,InputasStringNoDecimal : String;
+    DecimalPlace : boolean;
+    Stepper,Counter,i,DecimalPosition : integer;
+begin
+  InputasString:=FloattoStr(Input);
+  for Stepper := 1 to Length(InputAsString) do
+    begin
+      if InputasString[Stepper]='.'
+        then begin
+              DecimalPosition:=Stepper;
+              DecimalPlace:=true;
+             end
+        else begin
+             SetLength(InputAsStringNoDecimal,Length(InputAsStringNoDecimal)+1);
+             InputasStringNoDecimal[Length(InputAsStringNoDecimal)]:=InputasString[Stepper]
+             end;
+    end;
+  InputasStringNoDecimal:=RoundInputasString(InputasStringNoDecimal,X);
+  SetLength(InputasStringNoDecimal,X);
+  InputasString:=InputasStringNoDecimal;
+  if DecimalPlace=true
+    then begin
+          SetLength(InputasString,X+1);
+          for I := Length(InputasString) downto DecimalPosition+1 do
+              begin
+                 InputasString[i]:=InputasString[i-1]
+              end;
+          InputasString[DecimalPosition]:='.';
+         end;
+Result:=StrtoFloat(InputasString);
+end;
+
+function CalculateIfValidXDigitPositiveReal(Input:String; X:integer) : boolean;
+begin
+  if (StrtoFloat(input)<0) or (CalculateSignificantFigures(Input)>X) then result:=false
+  else result := true;
+end;
+
+function CalculateTopOfSlopeY (HeightOfPlankPixels : real) : real;
+begin
+ Result:=OwnModelForm.Height-50-(HeightOfPlankPixels*Cos((pi/2)-PlankAngleRadians));
+end;
+
+function CalculateTopOfSlopeX (HeightOfPlankPixels : real) : real;
+begin
+ Result:=70+(HeightOfPlankPixels*Sin((pi/2)-PlankAngleRadians));
+end;
+
+procedure TOwnModelForm.AnimateBallsToCorrectPositions;
+var NewBall1X,NewBall1Y,NewBall2X,NewBall2Y,BottomOfPlankX,BottomOfPlankY : real;
+begin
+  BottomOfPlankY:=Plank.Position.Y+HeightOfPlankPixels-52;
+  BottomOfPlankX:=Plank.Position.X-18;
+  NewBall1X:=BottomOfPlankX+(ConvertMetresToPixels(DistanceBall1StartsUpPlank)*Cos(PlankAngleRadians));
+  NewBall1Y:=BottomOfPlankY-(ConvertMetresToPixels(DistanceBall1StartsUpPlank)*Sin(PlankAngleRadians));
+  NewBall2X:=BottomOfPlankX+HeightOfPlankPixels*Cos(PlankAngleRadians);
+  NewBall2Y:=BottomOfPlankY - ConvertMetresToPixels((PlankLength*Sin(PlankAngleRadians))-StringLength+PlankLength-DistanceBall1StartsUpPlank);
+  Ball1.AnimateFloat('position.X',NewBall1X,1);
+  Ball1.AnimateFloat('position.Y',NewBall1Y,1);
+  Ball2.AnimateFloat('position.X',NewBall2X,1);
+  Ball2.AnimateFloat('position.Y',NewBall2Y,1);
+end;
+
+procedure TOwnModelForm.AnimateModelButtonClick(Sender: TObject);
+var    UpSlope : string;
+       Counter : integer;
+       NewXBall1,NewYBall1,NewXBall2,NewYBall2,TimeForThisMovement,PartEndVelocity,Ball2YLocation,Ball1XLocation,Ball1YLocation,EachPartOfInitialMovementLength, InitialMovementLength,ExtraDisplacementLength,EachPartOfExtraDisplacementLength,Acceleration,VelocityOfBall1WhenBall2HitGround,VelocityOFBall2WhenBall1HitGround,CurrentInitialSpeed,WaitingTime,LowestRatioForMovement,HighestRatioForMovement:real;
+begin
+CurrentInitialSpeed:=0;
+WaitingTime:=0;
+if Ball2Mass>Ball1Mass*((CoefficientofFriction*Cos(PlankAngleRadians))+Sin(PlankAngleRadians)) then UpSlope:='UpSlope'
+else if Ball2Mass<Ball1Mass*((-CoefficientofFriction*Cos(PlankAngleRadians))+Sin(PlankAngleRadians)) then UpSlope:='DownSlope'
+else UpSlope:= 'Stationery';
+if UpSlope = 'UpSlope' then
+ begin
+    Acceleration:=((-Ball1Mass*g*((Sin(PlankAngleRadians))+(CoefficientofFriction*(Cos(PlankAngleRadians)))))+(Ball2Mass*g))/(Ball1Mass+Ball2Mass);
+    VelocityOfBall1WhenBall2HitGround:= Sqrt(2*Acceleration*((PlankLength*Sin(PlankAngleRadians))-StringLength+PlankLength-DistanceBall1StartsUpPlank));
+    ExtraDisplacementLength:=(((VelocityOfBall1WhenBall2HitGround)*(VelocityOfBall1WhenBall2HitGround))/(2*g*((CoefficientofFriction*Cos(PlankAngleRadians))+(Sin(PlankAngleRadians)))));
+    EachPartOfExtraDisplacementLength:=ExtraDisplacementLength/SmoothnessConstant;
+    InitialMovementLength:=(PlankLength*Sin(PlankAngleRadians))-StringLength+PlankLength-DistanceBall1StartsUpPlank;
+    EachPartOfInitialMovementLength:=InitialMovementLength/SmoothnessConstant;
+    Ball2YLocation:=Ball2.Position.Y;
+    Ball1YLocation:=Ball1.Position.Y;
+    Ball1XLocation:=Ball1.Position.X;
+    if DistanceBall1StartsUpPlank+InitialMovementLength+ExtraDisplacementLength>PlankLength
+      then Showmessage('Chosen Values result in a problem beyond the M1 Specification, Ball 1 would fly off the top of the incline')
+      else begin
+              for counter := 1 to SmoothnessConstant do
+                begin
+                  PartEndVelocity:=Sqrt((CurrentInitialSpeed*CurrentInitialSpeed)+(2*Acceleration*EachPartOfInitialMovementLength));
+                  TimeForThisMovement:=(PartEndVelocity-CurrentInitialSpeed)/Acceleration;
+                  NewYBall2:=Ball2YLocation+ConvertMetresToPixels(Counter*EachPartOfInitialMovementLength);
+                  NewXBall1:= Ball1XLocation + ConvertMetresToPixels((Counter*EachPartOfInitialMovementLength)*Cos(PlankAngleRadians));
+                  NewYBall1:= Ball1YLocation - ConvertMetresToPixels((Counter*EachPartOfInitialMovementLength)*Sin(PlankAngleRadians));
+                  Ball1.AnimateFloatDelay('position.Y',NewYBall1,TimeForThisMovement,WaitingTime);
+                  Ball1.AnimateFloatDelay('position.X',NewXBall1,TimeForThisMovement,WaitingTime);
+                  Ball2.AnimateFloatDelay('position.Y',NewYBall2,TimeForThisMovement,WaitingTime);
+                  PlankString.AnimateFloatDelay('Height',ConvertMetresToPixels(PlankLength-(DistanceBall1StartsUpPlank+(Counter*EachPartOfInitialMovementLength))),TimeForThisMovement,WaitingTime);
+                  VerticalString.AnimateFloatDelay('Height',ConvertMetresToPixels(StringLength-PlankLength+DistanceBall1StartsUpPlank+(Counter*EachPartOfInitialMovementLength)),TimeForThisMovement,WaitingTime);
+                  WaitingTime:=WaitingTime+TimeforThisMovement;
+                  CurrentInitialSpeed:=PartEndVelocity;
+                end;
+              Ball1XLocation:=NewXBall1;
+              Ball1YLocation:=NewYBall1;
+              for counter := 1 to (SmoothnessConstant-1) do
+                begin
+                 PartEndVelocity:=Sqrt((CurrentInitialSpeed*CurrentInitialSpeed)+(-2*g*((CoefficientofFriction*Cos(PlankAngleRadians))+Sin(PlankAngleRadians))*EachPartOfExtraDisplacementLength));
+                 TimeForThisMovement:=(2*EachPartOfExtraDisplacementLength)/(CurrentInitialSpeed+PartEndVelocity);
+                 NewXBall1:=Ball1XLocation + ConvertMetresToPixels((Counter*EachPartOfExtraDisplacementLength)*Cos(PlankAngleRadians));
+                 NewYBall1:= Ball1YLocation - ConvertMetresToPixels((Counter*EachPartOfExtraDisplacementLength)*Sin(PlankAngleRadians));
+                 Ball1.AnimateFloatDelay('position.Y',NewYBall1,TimeForThisMovement,WaitingTime);
+                 Ball1.AnimateFloatDelay('position.X',NewXBall1,TimeForThisMovement,WaitingTime);
+                 PlankString.AnimateFloatDelay('Height',ConvertMetresToPixels(PlankLength-(DistanceBall1StartsUpPlank+InitialMovementLength+(Counter*EachPartOfExtraDisplacementLength))),TimeForThisMovement,WaitingTime);
+                 WaitingTime:=WaitingTime+TimeForThisMovement;
+                 CurrentInitialSpeed:=PartEndVelocity;
+                end;
+              Ball1XLocation:=NewXBall1;
+              Ball1YLocation:=NewYBall1;
+              CurrentInitialSpeed:=0;
+              for counter := 1 to (SmoothnessConstant-1) do
+                begin
+                 PartEndVelocity:=Sqrt((CurrentInitialSpeed*CurrentInitialSpeed)+(2*g*((CoefficientofFriction*Cos(PlankAngleRadians))+Sin(PlankAngleRadians))*EachPartOfExtraDisplacementLength));
+                 TimeForThisMovement:=(2*EachPartOfExtraDisplacementLength)/(CurrentInitialSpeed+PartEndVelocity);
+                 NewXBall1:=Ball1XLocation - ConvertMetresToPixels((Counter*EachPartOfExtraDisplacementLength)*Cos(PlankAngleRadians));
+                 NewYBall1:=Ball1YLocation + ConvertMetresToPixels((Counter*EachPartOfExtraDisplacementLength)*Sin(PlankAngleRadians));
+                 Ball1.AnimateFloatDelay('position.Y',NewYBall1,TimeForThisMovement,WaitingTime);
+                 Ball1.AnimateFloatDelay('position.X',NewXBall1,TimeForThisMovement,WaitingTime);
+                 PlankString.AnimateFloatDelay('Height',ConvertMetresToPixels(PlankLength-(DistanceBall1StartsUpPlank+InitialMovementLength+ExtraDisplacementLength-(Counter*EachPartOfExtraDisplacementLength))),TimeForThisMovement,WaitingTime);
+                 WaitingTime:=WaitingTime+TimeForThisMovement;
+                 CurrentInitialSpeed:=PartEndVelocity;
+                end;
+          end;
+ end
+ else if UpSlope = 'DownSlope' then begin
+    Acceleration:=((Ball1Mass*g*((Sin(PlankAngleRadians))-(CoefficientofFriction*(Cos(PlankAngleRadians)))))-(Ball2Mass*g))/(Ball1Mass+Ball2Mass);
+    VelocityOfBall2WhenBall1HitGround:= Sqrt(2*Acceleration*DistanceBall1StartsUpPlank);
+    InitialMovementLength:=DistanceBall1StartsUpPlank;
+    EachPartOfInitialMovementLength:=InitialMovementLength/SmoothnessConstant;
+    ExtraDisplacementLength:=((VelocityOfBall2WhenBall1HitGround)*(VelocityOfBall2WhenBall1HitGround))/(2*g);
+    EachPartOfExtraDisplacementLength:=ExtraDisplacementLength/SmoothnessConstant;
+    Ball2YLocation:=Ball2.Position.Y;
+    Ball1YLocation:=Ball1.Position.Y;
+    Ball1XLocation:=Ball1.Position.X;
+    if (PlankLength*Sin(PlankAngleRadians))-StringLength+PlankLength-DistanceBall1StartsUpPlank+InitialMovementLength+ExtraDisplacementLength>PlankLength*Sin(PlankAngleRadians)
+      then Showmessage('Chosen Values result in a problem beyond the M1 Specification, Ball 2 would move higher than the top of the incline')
+      else begin
+            for counter := 1 to SmoothnessConstant do
+              begin
+                PartEndVelocity:=Sqrt((CurrentInitialSpeed*CurrentInitialSpeed)+(2*Acceleration*EachPartOfInitialMovementLength));
+                TimeForThisMovement:=(PartEndVelocity-CurrentInitialSpeed)/Acceleration;
+                NewYBall2:=Ball2YLocation- ConvertMetresToPixels(Counter*EachPartOfInitialMovementLength);
+                NewXBall1:= Ball1XLocation - ConvertMetresToPixels((Counter*EachPartOfInitialMovementLength)*Cos(PlankAngleRadians));
+                NewYBall1:= Ball1YLocation + ConvertMetresToPixels((Counter*EachPartOfInitialMovementLength)*Sin(PlankAngleRadians));
+                Ball1.AnimateFloatDelay('position.Y',NewYBall1,TimeForThisMovement,WaitingTime);
+                Ball1.AnimateFloatDelay('position.X',NewXBall1,TimeForThisMovement,WaitingTime);
+                Ball2.AnimateFloatDelay('position.Y',NewYBall2,TimeForThisMovement,WaitingTime);
+                PlankString.AnimateFloatDelay('Height',ConvertMetresToPixels(PlankLength-(DistanceBall1StartsUpPlank-(Counter*EachPartOfInitialMovementLength))),TimeForThisMovement,WaitingTime);
+                VerticalString.AnimateFloatDelay('Height',ConvertMetresToPixels(StringLength-PlankLength+DistanceBall1StartsUpPlank-(Counter*EachPartOfInitialMovementLength)),TimeForThisMovement,WaitingTime);
+                WaitingTime:=WaitingTime+TimeforThisMovement;
+                CurrentInitialSpeed:=PartEndVelocity;
+              end;
+            Ball2YLocation:=NewYBall2;
+            for counter := 1 to (SmoothnessConstant-1) do
+              begin
+               PartEndVelocity:=Sqrt((CurrentInitialSpeed*CurrentInitialSpeed)+(-2*g*EachPartOfExtraDisplacementLength));
+               TimeForThisMovement:=(2*EachPartOfExtraDisplacementLength)/(CurrentInitialSpeed+PartEndVelocity);
+               NewYBall2:=Ball2YLocation- ConvertMetresToPixels(Counter*EachPartOfExtraDisplacementLength);
+               Ball2.AnimateFloatDelay('position.y',NewYBall2,TimeForThisMovement,WaitingTime);
+               VerticalString.AnimateFloatDelay('Height',ConvertMetresToPixels(StringLength-PlankLength+DistanceBall1StartsUpPlank-InitialMovementLength-(Counter*EachPartOfExtraDisplacementLength)),TimeForThisMovement,WaitingTime);
+               WaitingTime:=WaitingTime+TimeForThisMovement;
+               CurrentInitialSpeed:=PartEndVelocity;
+              end;
+            CurrentInitialSpeed:=0;
+            Ball2YLocation:=NewYBall2;
+            for counter := 1 to (SmoothnessConstant-1) do
+              begin
+               PartEndVelocity:=Sqrt((CurrentInitialSpeed*CurrentInitialSpeed)+(2*g*EachPartOfExtraDisplacementLength));
+               TimeForThisMovement:=(2*EachPartOfExtraDisplacementLength)/(CurrentInitialSpeed+PartEndVelocity);
+               NewYBall2:=Ball2YLocation+ConvertMetresToPixels(Counter*EachPartOfExtraDisplacementLength);
+               Ball2.AnimateFloatDelay('position.y',NewYBall2,TimeForThisMovement,WaitingTime);
+               VerticalString.AnimateFloatDelay('Height',ConvertMetresToPixels(StringLength-PlankLength+DistanceBall1StartsUpPlank-InitialMovementLength-ExtraDisplacementLength+(Counter*EachPartOfExtraDisplacementLength)),TimeForThisMovement,WaitingTime);
+               WaitingTime:=WaitingTime+TimeForThisMovement;
+               CurrentInitialSpeed:=PartEndVelocity;
+              end;
+      end;
+ end
+ else if UpSlope = 'Stationery' then
+  begin
+    LowestRatioForMovement:= (CoefficientofFriction*Cos(PlankAngleRadians))+Sin(PlankAngleRadians);
+    HighestRatioForMovement:=(-CoefficientofFriction*Cos(PlankAngleRadians))+Sin(PlankAngleRadians);
+    if HighestRatioForMovement<0
+      then Showmessage('The Ball would not move! For this angle and coefficient of friction, the system will only move where the Mass of Ball 2 divided by the Mass of Ball 1 is greater than ' + FloattoStr(MakeXDigits(LowestRatioForMovement,4)))
+      else Showmessage('The Ball would not move! For this angle and coefficient of friction, the system will only move where the Mass of Ball 2 divided by the Mass of Ball 1 is greater than ' + FloattoStr(MakeXDigits(LowestRatioForMovement,4)) + ' or smaller than ' + FloattoStr(MakeXDigits(HighestRatioForMovement,4)));
+  end;
+end;
+
+procedure TOwnModelForm.AnimatePlankAngle;
+begin
+  Plank.AnimateFloat('rotationangle',90-PlankAngleDegrees,1);
+end;
+
+procedure TOwnModelForm.AnimatePlankStringAngleAndPosition(TopOfSlopeY,TopOfSlopeX : real);
+begin
+ PlankString.AnimateFloat('rotationangle',90-PlankAngleDegrees,1);
+ PlankString.AnimateFloat('position.X',TopOfSlopeX+80,1);
+ PlankString.AnimateFloat('position.Y',TopOfSlopeY-30,1);
+end;
+
+procedure TOwnModelForm.AnimateVerticalStringPosition(TopOfSlopeY,TopOfSlopeX: Real);
+begin
+ VerticalString.AnimateFloat('position.X',TopOfSlopeX+80,1);
+ VerticalString.AnimateFloat('position.Y',TopOfSlopeY-30,1);
+end;
+
+procedure TOwnModelForm.AnimateStringToCorrectHeight;
+begin
+  PlankString.AnimateFloat('Height',ConvertMetresToPixels(PlankLength-DistanceBall1StartsUpPlank),1);
+  VerticalString.AnimateFloat('Height',ConvertMetresToPixels(StringLength-PlankLength+DistanceBall1StartsUpPlank),1);
+end;
+
+procedure TOwnModelForm.UpdateModel;
+var TopOfSlopeY, TopOfSlopeX : real;
+begin
+ AnimatePlankAngle;
+ TopOfSlopeY:=CalculateTopOfSlopeY(HeightOfPlankPixels);
+ TopOfSlopeX:=CalculateTopOfSlopeX(HeightOfPlankPixels);
+ AnimatePlankStringAngleAndPosition(TopOfSlopeY,TopOfSlopeX);
+ AnimateVerticalStringPosition(TopOfSlopeY,TopOfSlopeX);
+ AnimateBallsToCorrectPositions;
+ AnimateStringToCorrectHeight;
+end;
+
+procedure TOwnModelForm.UpdateModelButtonClick(Sender: TObject);
+begin
+CheckChosenValues;
+UpdateModel;
+end;
+
+procedure TOwnModelForm.AngleSelectorChange(Sender: TObject);
+begin
+  if (StrtoInt(AngleofPlankSelector.Text)>89) or (StrtoInt(AngleofPlankSelector.Text)<1)then
+  begin
+    AngleOfPlankSelector.Text:=FloattoStr(DefaultPlankAngleDegrees);
+    ShowMessage('Not a valid angle of incline, please select an integer between 0 and 90');
+  end;
+  PlankAngleDegrees:=StrToInt(AngleofPlankSelector.Text);
+  PlankAngleRadians:=DegtoRad(PlankAngleDegrees);
+end;
+
+procedure TOwnModelForm.CoefficientOfFrictionSelectorChange(Sender: TObject);
+begin
+  if CalculateIfValidXDigitPositiveReal(CoefficientOfFrictionSelector.Text,4) = false then
+    begin
+      CoefficientOfFrictionSelector.Text:=FloattoStr(DefaultCoefficientOfFriction);
+      ShowMessage('Not a valid coefficient of friction, please select a positive 4 digit or less real number');
+    end;
+  CoefficientOfFriction:=StrToFloat(CoefficientOfFrictionSelector.Text);
+end;
+
+procedure TOwnModelForm.ResetButtonClick(Sender: TObject);
+begin
+  ResetToDefaultValues;
+  UpdateModel;
+end;
+
+procedure TOwnModelForm.ResetToDefaultValues;
+begin
+  PlankLength:=DefaultPlankLength;
+  PlankAngleDegrees:= DefaultPlankAngleDegrees;
+  Ball1Mass:=DefaultBall1Mass;
+  Ball2Mass:=DefaultBall2Mass;
+  StringLength:=DefaultStringLength;
+  DistanceBall1StartsUpPlank:=DefaultDistanceBall1StartsUpPlank;
+  CoefficientOfFriction:=DefaultCoefficientOfFriction;
+  LengthOfPlankSelector.Text:=FloattoStr(DefaultPlankLength);
+  AngleOfPlankSelector.Text:= FloattoStr(DefaultPlankAngleDegrees);
+  MassOfBall1Selector.Text:=FloattoStr(DefaultBall1Mass);
+  MassOfBall2Selector.Text:=FloattoStr(DefaultBall2Mass);
+  LengthOfStringSelector.Text:=FloattoStr(DefaultStringLength);
+  HowFarBall1UpPlankSelector.Text:=FloattoStr(DefaultDistanceBall1StartsUpPlank);
+  CoefficientOfFrictionSelector.Text:=FloattoStr(DefaultCoefficientOfFriction);
+end;
+
+procedure TOwnModelForm.ReturnToMenuButtonClick(Sender: TObject);
+begin
+  MainMenuForm.Show;
+  OwnModelForm.Hide;
+end;
+
+procedure TOwnModelForm.CheckChosenValues;
+begin
+  if DistanceBall1StartsUpPlank+StringLength<PlankLength
+    then begin
+          ShowMessage('Not an accepeted change, this would result in the string not begin long enough to connect two particles in this plane. Resetting to Default Values.');
+          ResettoDefaultValues;
+         end;
+  if DistanceBall1StartsUpPlank>PlankLength
+    then begin
+          ShowMessage('Not an accepted change, the distance Ball 1 starts up the incline cannot be greater than the length of the plank. Resetting to Default Values.');
+          ResetToDefaultValues;
+         end;
+  if StringLength-PlankLength+DistanceBall1StartsUpPlank>PlankLength*Sin(PlankAngleRadians)
+    then begin
+          ShowMessage('Not an accepted change, this would result in a slack string due to Ball 2 not being able to fall through the floor. Resetting to Default Values');
+          ResetToDefaultValues;
+         end;
+  if StringLength-PlankLength+DistanceBall1StartsUpPlank>PlankLength*Sin(PlankAngleRadians)
+    then begin
+          ShowMessage('Not an accepted change, this would result in a slack string due to Ball 2 not being able to fall through the floor. Resetting to Default Values');
+          ResetToDefaultValues;
+         end;
+end;
+
+procedure TOwnModelForm.CloseProgramButtonClick(Sender: TObject);
+begin
+ halt;
+ Ball1.Destroy;
+ Ball2.Destroy;
+end;
+
+procedure TOwnModelForm.FormCreate(Sender: TObject);
+var
+  Ballstream : TResourceStream;
+begin
+  BallStream := TResourceStream.Create(MainInstance, 'BallImage', RT_RCDATA);
+  Ball1:=TBall.Create(BallStream,Self);
+  Ball2:=TBall.Create(BallStream,Self);
+  DefaultPlankLength:=6;
+  DefaultPlankAngleDegrees:=30;
+  DefaultBall1Mass:=5;
+  DefaultBall2Mass:=5;
+  DefaultStringLength:=7;
+  DefaultDistanceBall1StartsUpPlank:=1;
+  DefaultCoefficientOfFriction:=0.3;
+  ResetToDefaultValues;
+end;
+
+procedure TOwnModelForm.FormKeyUp(Sender: TObject; var Key: Word; var KeyChar: Char; Shift: TShiftState);
+begin
+ if Key=VKReturn then
+  begin
+    CheckChosenValues;
+    UpdateModel;
+  end;
+end;
+
+
+procedure TOwnModelForm.FormShow(Sender: TObject);
+var TopOfSlopeY,TopOfSlopeX,BottomOfPlankY,BottomOfPlankX,Ball1X,Ball1Y,Ball2X,Ball2Y : real;
+begin
+  HeightofPlankPixels:=CalculateHeightofPlanktoUseInPixels;
+  Plank.SetBounds(70,OwnModelForm.Height-50-HeightOfPlankPixels,50,HeightofPlankPixels);
+  ResetToDefaultValues;
+  Plank.RotationAngle:=90-PlankAngleDegrees;
+  TopOfSlopeY:=CalculateTopOfSlopeY(HeightOfPlankPixels);
+  TopOfSlopeX:=CalculateTopOfSlopeX(HeightOfPlankPixels);
+  PlankString.rotationangle:=90-PlankAngleDegrees;
+  PlankString.Position.X:=TopOfSlopeX+80;
+  PlankString.Position.Y:=TopOfSlopeY-30;
+  VerticalString.Position.X:=TopOfSlopeX+80;
+  VerticalString.Position.Y:=TopOfSlopeY-30;
+  BottomOfPlankY:=Plank.Position.Y+HeightOfPlankPixels-52;
+  BottomOfPlankX:=Plank.Position.X-18;
+  Ball1X:=BottomOfPlankX+(ConvertMetresToPixels(DistanceBall1StartsUpPlank)*Cos(PlankAngleRadians));
+  Ball1Y:=BottomOfPlankY-(ConvertMetresToPixels(DistanceBall1StartsUpPlank)*Sin(PlankAngleRadians));
+  Ball2X:=BottomOfPlankX+HeightOfPlankPixels*Cos(PlankAngleRadians);
+  Ball2Y:=BottomOfPlankY - ConvertMetresToPixels((PlankLength*Sin(PlankAngleRadians))-StringLength+PlankLength-DistanceBall1StartsUpPlank);
+  Ball1.Position.X:=Ball1X;
+  Ball1.Position.Y:=Ball1Y;
+  Ball2.Position.X:=Ball2X;
+  Ball2.Position.Y:=Ball2Y;
+  PlankString.Height:=ConvertMetresToPixels(PlankLength-DistanceBall1StartsUpPlank);
+  VerticalString.Height:=ConvertMetresToPixels(StringLength-PlankLength+DistanceBall1StartsUpPlank);
+end;
+
+procedure TOwnModelForm.HowFarBall1UpPlankSelectorChange(Sender: TObject);
+begin
+  if CalculateIfValidXDigitPositiveReal(HowFarBall1UpPlankSelector.Text,3) = false then
+    begin
+      HowFarBall1UpPlankSelector.Text:=FloattoStr(DefaultDistanceBall1StartsUpPlank);
+      ShowMessage('Not a valid distance for ball 1 to start up plank, please select a positive 3 digit or less real number');
+    end;
+  DistanceBall1StartsUpPlank:=StrToFloat(HowFarBall1UpPlankSelector.Text);;
+end;
+
+procedure TOwnModelForm.PlankLengthSelectorChange(Sender: TObject);
+begin
+  if CalculateIfValidXDigitPositiveReal(LengthOfPlankSelector.Text,3) = false then
+    begin
+      LengthOfPlankSelector.Text:=FloattoStr(DefaultPlankLength);
+      ShowMessage('Not a valid plank length, please select a positive 3 digit or less real number');
+    end;
+  PlankLength:=StrToFloat(LengthOfPlankSelector.Text);
+end;
+
+procedure TOwnModelForm.StringLengthSelectorChange(Sender: TObject);
+begin
+  if CalculateIfValidXDigitPositiveReal(LengthOfStringSelector.Text,3) = false then
+    begin
+      LengthOfStringSelector.Text:=FloattoStr(DefaultStringLength);
+      ShowMessage('Not a valid string length, please select a positive 3 digit or less real number');
+    end;
+  StringLength:=StrToFloat(LengthOfStringSelector.Text);
+end;
+
+procedure TOwnModelForm.MassOfBall1SelectorChange(Sender: TObject);
+begin
+  if CalculateIfValidXDigitPositiveReal(MassOfBall1Selector.Text,3) = false then
+    begin
+      MassOfBall1Selector.Text:=FloattoStr(DefaultBall1Mass);
+      ShowMessage('Not a valid mass of ball 1, please select a positive 3 digit or less real number');
+    end;
+  Ball1Mass:=StrToFloat(MassOfBall1Selector.Text);
+end;
+
+procedure TOwnModelForm.MassOfBall2SelectorChange(Sender: TObject);
+begin
+  if CalculateIfValidXDigitPositiveReal(MassOfBall2Selector.Text,3) = false then
+    begin
+      MassOfBall2Selector.Text:=FloattoStr(DefaultBall2Mass);
+      ShowMessage('Not a valid mass of ball 2, please select a positive 3 digit or less real number');
+    end;
+  Ball2Mass:=StrToFloat(MassOfBall2Selector.Text);
+end;
+
+
+
+
+end.
+
+

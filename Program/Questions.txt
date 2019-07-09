@@ -1,0 +1,9 @@
+What is the Tension in the string? (4SF)
+What is the Initial Acceleration of the system? (7SF)
+What is the Angle of Incline? (2SF)
+What is the Mass of Ball 1? (3SF)
+What is the Mass of Ball 2? (3SF)
+What is the Coefficient of Friction? (3SF)
+What is the Initial Displacement of the System? (3SF)
+What is the Displacement that occurs after one of the balls hits the ground? (3SF)
+Does Ball 1 move 'up' the slope or 'down' the slope?
